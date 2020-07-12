@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "start": "nuxt start",
+    "start:prod": "export NODE_ENV=\"production\" yarn build && yarn start",
     "build": "nuxt build",
     "export": "nuxt export",
     "serve": "nuxt serve",
