@@ -1,7 +1,7 @@
 
 const API_URL = process.env.NODE_ENV === 'production' ?
   'https://<hosted-url>/api' :
-  'http://localhost:5000/api';
+  'http://localhost:3000/api';
 
 
 module.exports = {
@@ -73,7 +73,9 @@ module.exports = {
   axios: { 
     baseURL: API_URL,
     timeout: 1000,
-    headers: {'Content-Type': 'application/json'}
+    headers: {'Content-Type': 'application/json'},
+    proxyHeaders: false,
+    credentials: false
   },
   /*
    ** Build configuration

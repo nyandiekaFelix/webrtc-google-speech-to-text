@@ -1,11 +1,15 @@
 const { Nuxt, Builder } = require("nuxt");
 const bodyParser = require('body-parser');
 const logger = require('morgan');
+const cors = require('cors');
+
 
 const app = require("express")();
 const port = process.env.PORT || 5000;
 
 app.use(logger('dev'));
+
+app.use(cors());
 
 // Handle POST request data
 app.use(bodyParser.json());

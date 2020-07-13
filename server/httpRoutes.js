@@ -1,23 +1,31 @@
 const express = require('express');
 
-const { loginController } = require('./controllers/auth.js');
-const usersController = require('./controllers/users.js');
+const { login, signup } = require('./controllers/auth.js');
+const { editProfile } = require('./controllers/profile.js');
+const { getUsers, deleteUser } = require('./controllers/users.js');
 
 module.exports = function initializeRoutes(app) {
-  const Router = express.Router();
-  // Router.use(authentication)
 
-  const login = Router.post('/login', loginController)
+  // Auth
+  const authRouter = express.Router();
 
-  const userAdmin = Router.get(
-    '/useradmin', 
-    (req, res) => { res.json({ message: 'Useradmin' }) 
-  })
+  authRouter.post('/login', login);
+  authRouter.post('/signup', signup);
 
-  const profile = Router.get(
-    '/profile', 
-    (req, res) => { res.json({ message: 'Profile' }) 
-  })
+  app.use('/auth', authRouter);
 
-  app.use('/user', Router)
+  // User admin
+  const userAdminRouter = express.Router();
+
+  userAdminRouter.get('/users', getUsers);
+  userAdminRouter.delete('/:userId', deleteUser);
+
+  app.use('/useradmin', userAdminRouter);
+
+  // Profile
+  const profileRouter = express.Router();
+
+  profileRouter.put('/:userId', editProfile);
+
+  app.use('/profile', profileRouter);
 }
