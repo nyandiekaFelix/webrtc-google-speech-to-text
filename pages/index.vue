@@ -28,7 +28,16 @@
 </template>
 
 <script>
-export default {}
+import APIMixin from '../mixins/api';
+
+export default {
+  mixins: [APIMixin],
+  async mounted() {
+    console.log('index', this.$axios) 
+    const user = { 'email': 'admin@mail.com' }  
+    await this.login(user);
+  }
+}
 </script>
 
 <style>
