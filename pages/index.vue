@@ -1,41 +1,93 @@
 <template>
   <div class="container">
-    <div>
-      <Logo />
-      <h1 class="title">
-        videoChat01
-      </h1>
-      <div class="links">
-        <a
-          href="https://nuxtjs.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="button--green"
-        >
-          Documentation
-        </a>
-        <a
-          href="https://github.com/nuxt/nuxt.js"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="button--grey"
-        >
-          GitHub
-        </a>
-      </div>
-    </div>
+    <b-card align="left" v-if="showForm && !isLoggedIn">
+
+    <b-form>
+      <b-form-group
+        id="input-group-1"
+        label="Email address:"
+        label-for="input-email"
+      >
+        <b-form-input
+          id="input-email"
+          v-model="email"
+          type="email"
+          required
+          placeholder="Enter email"
+        ></b-form-input>
+      </b-form-group>
+
+      <b-form-group id="input-group-2" label="Password:" label-for="input-password">
+        <b-form-input
+          id="input-password"
+          type="password"
+          v-model="password"
+          required
+          placeholder="Enter password"
+        ></b-form-input>
+      </b-form-group>
+
+      <b-button @click="login" variant="primary">Submit</b-button>
+    </b-form>
+    </b-card>
+
+    <b-jumbotron lead="Welcome to the video chat app" v-if="isLoggedIn">
+      <b-button variant="primary">
+        <nuxt-link to="/rooms" :style="{ color: '#fff' }">Rooms</nuxt-link>
+      </b-button>
+    </b-jumbotron>
+
   </div>
 </template>
 
 <script>
-import APIMixin from '../mixins/api';
+import AuthMixin from '../mixins/AuthMixin';
 
 export default {
-  mixins: [APIMixin],
-  async mounted() {
-    console.log('index', this.$axios) 
-    const user = { 'email': 'admin@mail.com' }  
-    await this.login(user);
+  mixins: [AuthMixin],
+  data() {
+    return {
+      email: null,
+      password: null,
+      error: null,
+      showForm: true
+    };
+  },
+  computed: {},
+  methods: {
+    displayError(error) {
+      this.error = error;
+    },
+
+    login() {
+      this.$axios.post(
+        '/login', 
+        { email: this.email, password: this.password })
+        .then(response => {
+          const { user, token } = response.data;
+          
+          this.user = user;
+          this.token = token;
+          
+          localStorage.setItem('user', JSON.stringify(user));
+          localStorage.setItem('token', JSON.stringify(token));
+          //this.resetFormData();
+        })
+        .catch(err => { this.displayError(err) });
+    },
+
+    resetFormData() {
+      this.email = null;
+      this.password = null;
+
+      // clear form validation state
+      this.showForm = false;
+      this.$nextTick(() => {
+        this.showForm = true;
+      });
+    }
+  },
+  async mounted() { 
   }
 }
 </script>
