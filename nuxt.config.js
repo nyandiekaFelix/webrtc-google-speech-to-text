@@ -1,3 +1,9 @@
+
+const API_URL = process.env.NODE_ENV === 'production' ?
+  'https://<hosted-url>/api' :
+  'http://localhost:5000/api';
+
+
 module.exports = {
   /*
    ** Nuxt rendering mode
@@ -9,6 +15,10 @@ module.exports = {
    ** See https://nuxtjs.org/api/configuration-target
    */
   target: 'server',
+
+  serverMiddleware: [
+    '~/server/index.js',
+  ],
   /*
    ** Headers of the page
    ** See https://nuxtjs.org/api/configuration-head
@@ -45,7 +55,7 @@ module.exports = {
    */
   buildModules: [
     // Doc: https://github.com/nuxt-community/eslint-module
-    '@nuxtjs/eslint-module',
+    //'@nuxtjs/eslint-module',
   ],
   /*
    ** Nuxt.js modules
@@ -60,7 +70,11 @@ module.exports = {
    ** Axios module configuration
    ** See https://axios.nuxtjs.org/options
    */
-  axios: {},
+  axios: { 
+    baseURL: API_URL,
+    timeout: 1000,
+    headers: {'Content-Type': 'application/json'}
+  },
   /*
    ** Build configuration
    ** See https://nuxtjs.org/api/configuration-build/
