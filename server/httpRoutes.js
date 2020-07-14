@@ -1,8 +1,8 @@
 const express = require('express');
 
-const { login, signup } = require('./controllers/auth.js');
+const { login } = require('./controllers/auth.js');
 const { editProfile } = require('./controllers/profile.js');
-const { getUsers, deleteUser } = require('./controllers/users.js');
+const { getUsers, deleteUser, createUser } = require('./controllers/users.js');
 
 module.exports = function initializeRoutes(app) {
 
@@ -10,13 +10,13 @@ module.exports = function initializeRoutes(app) {
   const authRouter = express.Router();
 
   authRouter.post('/login', login);
-  authRouter.post('/signup', signup);
 
   app.use('/auth', authRouter);
 
   // User admin
   const userAdminRouter = express.Router();
 
+  userAdminRouter.post('/users', createUser);
   userAdminRouter.get('/users', getUsers);
   userAdminRouter.delete('/:userId', deleteUser);
 

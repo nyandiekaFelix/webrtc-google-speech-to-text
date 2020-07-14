@@ -42,24 +42,4 @@ function login(req, res) {
 
 }
 
-function signup(req, res) {
-  
-  const { email, password, username } = req.body;
-
-  const user = {};
-
-  if(!userExists(email)) {
-    res.status(200).json({
-      token: `${generateJWT(user.email)}`,
-      user
-    });
-  } else {
-    res.status(409).json({
-      message: 'A user with that email already exists'
-    })
-  }
-
-}
-
-
-module.exports = { login, signup };
+module.exports = { login };

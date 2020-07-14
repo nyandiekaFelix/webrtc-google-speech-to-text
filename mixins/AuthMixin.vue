@@ -7,7 +7,7 @@
 export default {
   data() {
     return {
-      user: null,
+      user: {},
       token: null,
     };
   },

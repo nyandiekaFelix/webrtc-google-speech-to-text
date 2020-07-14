@@ -1,6 +1,6 @@
 
 function editProfile(req, res) {
-  const email = req.body.email;
+  const email = req.params.userId;
   const user = userExists(email)
 
   if(user) {
