@@ -1,38 +1,36 @@
 const jwt = require('jsonwebtoken');
 
-const User = require('../models/user.js');
+const db = require("../models/index.js");
+const Users = db.users;
 
-function generateJWT(user) {
+function generateJWT(userId) {
   return jwt.sign(
-    user, 
+    userId, 
     process.env.SECRET_KEY || '__secret__', 
     //{ expiresIn: null } // expiry time should ideally be set for security, Value given should be in seconds
   );
 }
 
-function userExists(email) {
-  const users = [
-    {
-      username: 'admin',
-      email: 'admin@mail.com',
-      password: 'password'
-    }
-  ];
-
-  const [user] = users.filter(usr => usr.email === email);
-
-  return user;
-}
-
-function login(req, res) {
+async function login(req, res) {
   
-  const email = req.body.email;
-  const user = userExists(email)
+  const { email, password } = req.body;
+  const user = await Users.getOneUser(email);
 
   if(user) {
+    const isPasswordValid = Users.validPassword(password, user.password);
+    
+    if(!isPasswordValid) {
+      res.status(401).json({
+        message: 'Password is incorrect'
+      });
+    }
+    
+    const { id, username, email, profileImage } = user;
     res.status(200).json({
       token: `${generateJWT(user.email)}`,
-      user
+      user: { 
+        id, username, email, profileImage
+      }
     });
   } else {
     res.status(404).json({

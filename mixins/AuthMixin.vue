@@ -25,8 +25,8 @@ export default {
     const user = localStorage.getItem('user');
     const token = localStorage.getItem('token');
 
-    this.user = user ? JSON.parse(user) : null;
-    this.token = token ? JSON.parse(token) : null;
+    this.user = (user !== undefined) ? JSON.parse(user) : null;
+    this.token = (token !== undefined) ? JSON.parse(token) : null;
   }
 }
 </script>

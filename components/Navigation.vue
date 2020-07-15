@@ -8,7 +8,7 @@
       <b-navbar-nav class="ml-auto"> 
         <b-nav-item-dropdown right v-if="isLoggedIn">
           <template v-slot:button-content>
-            <em>{{ user.username }}</em>
+            <em>{{ user.username || '...'}}</em>
           </template>
           <b-dropdown-item>
             <nuxt-link to="/rooms">Rooms</nuxt-link>

@@ -3,6 +3,8 @@ const bodyParser = require('body-parser');
 const logger = require('morgan');
 const cors = require('cors');
 
+const db = require('./models/index.js');
+db.sequelize.sync();
 
 const app = require("express")();
 const port = process.env.PORT || 5000;
