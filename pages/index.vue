@@ -61,7 +61,7 @@ export default {
 
     login() {
       this.$axios.post(
-        '/login', 
+        '/auth/login', 
         { email: this.email, password: this.password })
         .then(response => {
           const { user, token } = response.data;

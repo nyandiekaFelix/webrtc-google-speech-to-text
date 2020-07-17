@@ -7,7 +7,9 @@ const db = require('./models/index.js');
 db.sequelize.sync();
 
 const app = require("express")();
-const port = process.env.PORT || 5000;
+
+const socket = require('./socket.js');
+socket(app);
 
 app.use(logger('dev'));
 

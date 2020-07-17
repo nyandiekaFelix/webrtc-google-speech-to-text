@@ -15,15 +15,20 @@
   },
   "dependencies": {
     "@nuxtjs/axios": "^5.11.0",
+    "adapterjs": "^0.15.5",
+    "bcrypt": "^5.0.0",
     "bootstrap": "^4.5.0",
     "bootstrap-vue": "^2.15.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
+    "mysql2": "^2.1.0",
     "nuxt": "^2.13.0",
     "passport": "^0.4.1",
     "passport-jwt": "^4.0.0",
-    "socket.io": "^2.3.0"
+    "sequelize": "^6.3.3",
+    "socket.io": "^2.3.0",
+    "vue-socket.io": "^3.0.9"
   },
   "devDependencies": {
     "@nuxtjs/eslint-config": "^3.0.0",

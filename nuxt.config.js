@@ -39,12 +39,14 @@ module.exports = {
   /*
    ** Global CSS
    */
-  css: [],
+  css: [], 
   /*
    ** Plugins to load before mounting the App
    ** https://nuxtjs.org/guide/plugins
    */
-  plugins: [],
+  plugins: [
+    { src: '~/plugins/socket.client.js' }
+  ],
   /*
    ** Auto import components
    ** See https://nuxtjs.org/api/configuration-components
