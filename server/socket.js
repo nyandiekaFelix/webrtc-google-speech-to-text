@@ -48,7 +48,7 @@ function initSocket(app) {
         socket.join(roomId)
         rooms[roomId].addUser(user);
         
-        next({ room: room.roomId, users: room.roomUsers });
+        next({ room: roomId, users: rooms[roomId].roomUsers });
       } else {
         socket.join(roomId);
 
