@@ -5,15 +5,12 @@
 </template>
 
 <script>
-// import { mapActions } from 'vuex';
 
 export default {
   data: () => ({
     
   }),
   methods: {
-    // ...mapActions([]),
-
     generateRoomId() {
       return ("000000" + (Math.random()*Math.pow(36,6) << 0).toString(36)).slice(-6)
     },

@@ -26,8 +26,8 @@ class Room {
     this.users.push(user);
   }
 
-  getUser(userId) {
-    const [user] = this.users.filter(user => user.userId === userId);
+  getUser(socketId) {
+    const [user] = this.users.filter(user => user.socketId === socketId);
     return user;
   }
 
@@ -45,18 +45,34 @@ function initSocket(app) {
   io.on('connection', socket => {
     socket.on('joinRoom', (roomId, user, next) => {
       if (io.sockets.adapter.rooms[roomId]) {
-        socket.join(roomId)
-        rooms[roomId].addUser(user);
+        const room = rooms[roomId];
+
+        if(room.getUser(socket.id)) {
+          return next(
+            { room: roomId, users: room.roomUsers }, 
+            { ...user, socketId: socket.id }
+          );
+        } else {
+          socket.join(roomId);
+          rooms[roomId].addUser(user);
+          next(
+            { room: roomId, users: room.roomUsers },
+            { ...user, socketId: socket.id }
+          );
+        }
         
-        next({ room: roomId, users: rooms[roomId].roomUsers });
       } else {
         socket.join(roomId);
 
         const room = new Room(roomId);
+        user.socketId = socket.id;
         room.addUser(user);
         rooms[roomId] = room;
 
-        next({ room: room.roomId, users: room.roomUsers });              
+        next(
+          { room: room.roomId, users: room.roomUsers },
+          { ...user, socketId: socket.id}
+        );              
       }
     });
   });
