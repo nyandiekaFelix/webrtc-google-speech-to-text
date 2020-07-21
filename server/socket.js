@@ -43,22 +43,28 @@ function initSocket(app) {
 
 
   io.on('connection', socket => {
-    socket.on('joinRoom', (roomId, user, next) => {
+    socket.on('joinRoom', (roomId, user) => {
       if (io.sockets.adapter.rooms[roomId]) {
         const room = rooms[roomId];
 
         if(room.getUser(socket.id)) {
-          return next(
-            { room: roomId, users: room.roomUsers }, 
-            { ...user, socketId: socket.id }
-          );
+          socket.emit(
+            'roomJoined',
+            { room: room.roomId, users: room.roomUsers },
+            { ...user, socketId: socket.id}
+          );    
+          // broadcast to other members
         } else {
           socket.join(roomId);
+          user.socketId = socket.id;
           rooms[roomId].addUser(user);
-          next(
-            { room: roomId, users: room.roomUsers },
-            { ...user, socketId: socket.id }
-          );
+          
+          socket.emit(
+            'roomJoined',
+            { room: room.roomId, users: room.roomUsers },
+            { ...user, socketId: socket.id}
+          );    
+          // broadcast to other members
         }
         
       } else {
@@ -68,14 +74,21 @@ function initSocket(app) {
         user.socketId = socket.id;
         room.addUser(user);
         rooms[roomId] = room;
-
-        next(
+        
+        socket.emit(
+          'roomJoined',
           { room: room.roomId, users: room.roomUsers },
           { ...user, socketId: socket.id}
-        );              
+        );    
+        // broadcast to other members
       }
     });
+
+    socket.on('leaveRoom', (roomId, user) => {
+      
+    });
   });
+
 
   server.listen(SOCKET_PORT, () => {
     console.log(`socket live on 'http://localhost:${SOCKET_PORT}'`)
