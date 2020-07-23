@@ -1,7 +1,6 @@
 <template>
   <b-container class="meeting-room">
     <b-container v-if="room" fluid>
-      <h4>Meeting Id{{ room.roomId }}</h4>
       <b-container class="meeting-link" fluid>Sharable Link</b-container>
       <b-container fluid>
       <b-row>
@@ -28,7 +27,7 @@
 </template>
 
 <script>
-  import WebrtcMixin from '../../mixins/webrtcMixin.js';
+  import WebrtcMixin from '../../mixins/WebrtcMixin.js';
   import AuthMixin from '../../mixins/AuthMixin.vue';
 
   export default {
@@ -44,42 +43,34 @@
     },
 
     methods: {
-      onRoomJoined(room, currentUser) {
-        this.room = room;
-        this.currentUser = currentUser;
-        
-        this.startCall();
+      subscribeListeners() {
+        this.sockets.listener.subscribe('roomJoined', this.onRoomJoined);
+        //this.sockets.listener.subscribe('newMember', this.addRemotePeer);
+        //this.sockets.listener.subscribe('removeRemotePeer', this.removeRemotePeer);
       },
 
-      async startCall() {
-        await this.getUserMedia();
-        this.peerConnection = new RTCPeerConnection(this.configuration)
-        this.addLocalStream()
-        
-        console.log('stream', this.stream)
-        console.log('p-conn', this.peerConnection)
+      onRoomJoined(data) {
+        console.log('gets here', room);
+        const [room, currentUser] = data;
+        this.room = room;
+        this.currentUser = currentUser;
+
       },
 
       joinRoom(user) {
-        this.$socket.emit('joinRoom', this.roomId, user, this.onRoomJoined)
+        this.$socket.emit('joinRoom', this.roomId, user)
       },
 
-      exitRoom() {
-
+      exitRoom(message) {
+        console.log('ext test', message)
       },
-
-      toggleAudio() {
-        this.currentUser.muted = !this.currentUser.muted;
-      },
-      disableVideo() {},
     },
     mounted() {
+      this.subscribeListeners();
       this.roomId = this.$route.params.roomId;
       
       const user = { 
         username: this.user ? this.user.username : null,
-        muted: false,
-        paused: false
       };
       this.joinRoom(user);
     },
@@ -89,14 +80,15 @@
 <style scoped>
   .video-item {
     background: #000;
-    height: 400px;
+    border: solid 1px #fff;
+    height: 300px;
   }
   .video-header {
     margin-bottom: -25px !important;
    /* background: #000;*/
     color: #fff;
     padding-left: 4px;
-    width: 100%;
+    width: 10%;
     z-index: 1000;
     position: relative;
   }
