@@ -3,7 +3,7 @@ import VueSocketIO from 'vue-socket.io';
  
 export default function () {
  Vue.use(new VueSocketIO({
-   debug: false,
+   debug: true,
    connection: 'http://localhost:8989',
  }));
 }
