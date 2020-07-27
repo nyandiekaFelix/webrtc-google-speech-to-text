@@ -8,7 +8,7 @@
           id="local-video" 
           class="video-item">
           <p class="video-header">{{ currentUser.username || '---' }}</p> 
-          <video ref="my-video"></video> 
+          <video ref="localVideo" autoplay playsinline controls="false"></video> 
         </b-col>
         <b-col 
           cols="6"

@@ -1,11 +1,11 @@
 export default {
   data() {
     return {
-      peerConnection: null,
       localStream: null,
       peers: {},
-      config: {          
-        servers: [
+      constraints: { video: true, audio: true }
+      RTCconfig: {          
+        iceServers: [
           { 'url': 'stun:stun.l.google.com:19302' }
         ],
       },
@@ -13,24 +13,23 @@ export default {
   },
 
   computed: {
-    getVideoTracks() { return this.stream.getVideoTracks() },
-    getAudioTracks() { return this.stream.getAudioTracks() },
-    peerMediaElements() { return this.peers },
+    video_tracks() { return this.localStream.getVideoTracks() },
+    audio_tracks() { return this.localStream.getAudioTracks() },
+    peerRefs() { 
+      return Object.keys(this.peers).forEach(peer => `video-${peer}`);
+    }
   },
 
-  //beforeDestroy() {
-    //this.localStream.getTracks().forEach(track => track.stop());
-    //this.peerConnection.close();
-   // this.peerConnection = null;
-  //},
+  beforeDestroy() {
+    this.localStream.getTracks().forEach(track => track.stop());
+  },
 
   methods: {
     async getUserMedia() {
       if ("mediaDevices" in navigator) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia(this.constraints)
-          this.localVideo.srcObject = stream
-          this.stream = stream
+          const stream = await navigator.mediaDevices.getUserMedia(this.constraints);
+          this.addLocalStream(stream);
         } catch (error) {
           //alert('In order to continue, Camera & Audio access is required.');
           console.log("Couldn't get user media:\n", error)
@@ -38,33 +37,60 @@ export default {
       }
     },
   
-    addLocalStream() {
-      this.peerConnection.addStream(this.stream)
+    addLocalStream(stream) {
+      this.$refs.localVideo.srcObject = stream;
+      this.localStream = stream;
     },
     
     addRemoteStream(peer) {
           
     },
 
-    addPeer(peer) {
-      this.peers[peer.socketId] = peer;
+    addPeer({ socketId }) {
+      if(this.peers[socketId]) {
+        console.log('Already connected to peer');
+        return;
+      }
+      const peerConnection = new RTCPeerConnection(this.RTCconfig);
+      this.peers[socketId] = peerConnection;
+
+      peerConnection.onicecandidate = this.onICECandidate(socketId);
+      peerConnection.onaddstream = this.onAddStream(socketId);
+
       this.addRemoteStream()
 
+    },
+
+    onICECandidate(socketId) {
+      return event => {
+        console.log('event', event);
+
+        this.$socket.emit(''relayICECandidate', {
+          socketId,
+          iceCandidate: { ...event.candidate }
+        });
+      }
+    },
+
+    onAddStream(socketId) {
+      // create media elements
+      return event => {
+        this.peerRefs.push() = 
+      }
     },
 
     removePeer() {},
 
     toggleVideo() {
-      this.stream.getVideoTracks().forEach(t => { t.enabled = !t.enabled });
+      this.video_tracks.forEach(t => { t.enabled = !t.enabled });
     },
 
     toggleAudio() {
-      this.stream.getAudioTracks().forEach(t => { t.enabled = !t.enabled });
+      this.audio_tracks.forEach(t => { t.enabled = !t.enabled });
     },
   },
 
   async mounted() {
-    this.peerConnection = new RTCPeerConnection(this.config);
     await this.getUserMedia();
   }
 }

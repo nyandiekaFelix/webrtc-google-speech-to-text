@@ -41,6 +41,11 @@ function initSocket(app) {
   const server = http.createServer(app);
   const io = socketio(server, { origins: '*:*' });
 
+  const socketResponse = (room, userData, socketId) => ({
+    room: room.roomId, 
+    users: room.roomUsers,
+    currentUser: { ...userdata, socketId }
+  });
 
   io.on('connection', socket => {
     socket.on('joinRoom', (roomId, user) => {
@@ -48,23 +53,15 @@ function initSocket(app) {
         const room = rooms[roomId];
 
         if(room.getUser(socket.id)) {
-          socket.emit(
-            'roomJoined',
-            { room: room.roomId, users: room.roomUsers },
-            { ...user, socketId: socket.id}
-          );    
-          // broadcast to other members
+          socket.emit('roomJoined', socketResponse(room, user, socket.id));    
+          // 'newMember' broadcast to other members
         } else {
           socket.join(roomId);
           user.socketId = socket.id;
           rooms[roomId].addUser(user);
           
-          socket.emit(
-            'roomJoined',
-            { room: room.roomId, users: room.roomUsers },
-            { ...user, socketId: socket.id}
-          );    
-          // broadcast to other members
+          socket.emit('roomJoined', socketResponse(room, user, socket.id));    
+          // 'newMember' broadcast to other members
         }
         
       } else {
@@ -73,18 +70,17 @@ function initSocket(app) {
         const room = new Room(roomId);
         user.socketId = socket.id;
         room.addUser(user);
-        rooms[roomId] = room;
-        
-        socket.emit(
-          'roomJoined',
-          { room: room.roomId, users: room.roomUsers },
-          { ...user, socketId: socket.id}
-        );    
-        // broadcast to other members
+        rooms[roomId] = room; 
+
+        socket.emit('roomJoined', socketResponse(room, user, socket.id));
       }
     });
 
-    socket.on('leaveRoom', (roomId, user) => {
+    socket.on('disconnect', (roomId, user) => {
+      
+    });
+
+    socket.on('deleteRoom', roomId => {
       
     });
   });
