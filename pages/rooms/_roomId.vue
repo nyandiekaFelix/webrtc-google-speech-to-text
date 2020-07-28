@@ -45,7 +45,6 @@
     methods: {
       subscribeListeners() {
         this.sockets.listener.subscribe('roomJoined', this.onRoomJoined);
-        //this.sockets.listener.subscribe('newMember', this.addRemotePeer);
         //this.sockets.listener.subscribe('removeRemotePeer', this.removeRemotePeer);
       },
 

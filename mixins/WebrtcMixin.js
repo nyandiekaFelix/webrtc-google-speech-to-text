@@ -36,36 +36,48 @@ export default {
         }
       }
     },
+
+    subscribeRTCListeners() {
+      this.sockets.listener.subscribe('newMember', this.addPeer);
+    },
   
     addLocalStream(stream) {
       this.$refs.localVideo.srcObject = stream;
       this.localStream = stream;
     },
-    
-    addRemoteStream(peer) {
-          
-    },
 
-    addPeer({ socketId }) {
+    addPeer(socketId) {
       if(this.peers[socketId]) {
         console.log('Already connected to peer');
         return;
       }
+
       const peerConnection = new RTCPeerConnection(this.RTCconfig);
       this.peers[socketId] = peerConnection;
 
       peerConnection.onicecandidate = this.onICECandidate(socketId);
       peerConnection.onaddstream = this.onAddStream(socketId);
 
-      this.addRemoteStream()
+      peerConnection.addStream(this.localStream);
 
+      this.setupSpeechToText(peerConnection);
+    },
+
+    async createOffer(peerConnection) {
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      this.$socket.emit('offer', offer);
+    },
+
+    onOfferReceived(data) {
+      const {}
     },
 
     onICECandidate(socketId) {
       return event => {
         console.log('event', event);
 
-        this.$socket.emit(''relayICECandidate', {
+        this.$socket.emit('relayICECandidate', {
           socketId,
           iceCandidate: { ...event.candidate }
         });
@@ -75,8 +87,41 @@ export default {
     onAddStream(socketId) {
       // create media elements
       return event => {
-        this.peerRefs.push() = 
+        
       }
+    },
+
+    decodeDataChannelPayload(data) {
+      if (data instanceof ArrayBuffer) {
+        const dec = new TextDecoder('utf-8');
+        return Promise.resolve(dec.decode(data));
+      } else if (data instanceof Blob) {
+        const reader = new FileReader();
+        const readPromise = new Promise((accept, reject) => {
+          reader.onload = () => accept(reader.result);
+          reader.onerror = reject;
+        });
+        reader.readAsText(data, 'utf-8');
+        return readPromise;
+      }
+    }
+
+    setupSpeechToText(peerConnection) {
+      const dataChannel = peerConnection.createDataChannel('results', {
+        ordered: true,
+        protocol: 'tcp'
+      });
+      dataChannel.onmessage = evt => {
+        this.decodeDataChannelPayload(evt.data)
+          .then(strData => {
+            const result = JSON.parse(strData);
+            // socket emit 'speechToTextData'
+          });
+      };
+
+      dataChannel.onclose = () => { 
+        peerConnection.close();
+      };
     },
 
     removePeer() {},

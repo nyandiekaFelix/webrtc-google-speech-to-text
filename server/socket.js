@@ -41,10 +41,11 @@ function initSocket(app) {
   const server = http.createServer(app);
   const io = socketio(server, { origins: '*:*' });
 
-  const socketResponse = (room, userData, socketId) => ({
+  const roomJoinResponse = (room, userData, socketId, createOffer = false) => ({
     room: room.roomId, 
     users: room.roomUsers,
-    currentUser: { ...userdata, socketId }
+    currentUser: { ...userdata, socketId },
+    createOffer
   });
 
   io.on('connection', socket => {
@@ -53,15 +54,15 @@ function initSocket(app) {
         const room = rooms[roomId];
 
         if(room.getUser(socket.id)) {
-          socket.emit('roomJoined', socketResponse(room, user, socket.id));    
-          // 'newMember' broadcast to other members
+          socket.emit('roomJoined', roomJoinResponse(room, user, socket.id));    
+          socket.to(roomId).emit('newMember', socket.id);
         } else {
           socket.join(roomId);
           user.socketId = socket.id;
           rooms[roomId].addUser(user);
           
-          socket.emit('roomJoined', socketResponse(room, user, socket.id));    
-          // 'newMember' broadcast to other members
+          socket.emit('roomJoined', roomJoinResponse(room, user, socket.id, true));    
+          socket.to(roomId).emit('newMember', socket.id);
         }
         
       } else {
@@ -72,13 +73,17 @@ function initSocket(app) {
         room.addUser(user);
         rooms[roomId] = room; 
 
-        socket.emit('roomJoined', socketResponse(room, user, socket.id));
+        socket.emit('roomJoined', roomJoinResponse(room, user, socket.id));
       }
     });
 
     socket.on('disconnect', (roomId, user) => {
       
     });
+
+    socket.on('relaySessionDescription', sessionDescription => {});
+
+    socket.on('speechToTextData', data => {});
 
     socket.on('deleteRoom', roomId => {
       
