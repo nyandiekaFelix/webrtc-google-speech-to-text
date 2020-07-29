@@ -1,22 +1,32 @@
 <template>
   <b-container class="meeting-room">
-    <b-container v-if="room" fluid>
+    <b-container fluid v-if="meetingFull">
+      <b-jumbotron header="Meeting Full">
+        <p>Sorry. This meeting can only have a maximum of 4 participants</p>
+      </b-jumbotron>
+    </b-container>
+    <b-container v-show="room" fluid>
       <b-container class="meeting-link" fluid>Sharable Link</b-container>
       <b-container fluid>
       <b-row>
         <b-col cols="6"
           id="local-video" 
           class="video-item">
-          <p class="video-header">{{ currentUser.username || '---' }}</p> 
-          <video ref="localVideo" autoplay playsinline controls="false"></video> 
+          <p class="video-header" v-if="currentUser">{{ currentUser.username || '---' }}</p> 
+          <video ref="localVideo" 
+            autoplay playsinline controls="false"></video> 
         </b-col>
         <b-col 
           cols="6"
           class="video-item"
-          v-for="user in room.users.filter(usr => usr.socketId !== currentUser.socketId)"
-          :key="user.socketId">
-          <p class="video-header">{{ user.username || '---' }}</p> 
-          <video autoplay class="remote-video" ref="`video-${user.socketId}`"></video>      
+          v-for="peer in Object.keys(peers)"
+          v-if="peers[peer].stream"
+          :key="peer">
+          <p class="video-header">{{ peers[peer].username || '---' }}</p> 
+          <video autoplay 
+            class="remote-video" 
+            ref="`video-${peer}`"
+            :src-object.camel="peers[peer].stream"></video>      
         </b-col>
       </b-row>
       </b-container>
@@ -39,29 +49,34 @@
         roomId: null,
         room: null,
         currentUser: null,
+        meetingFull: false
       };
     },
 
     methods: {
       subscribeListeners() {
         this.sockets.listener.subscribe('roomJoined', this.onRoomJoined);
-        //this.sockets.listener.subscribe('removeRemotePeer', this.removeRemotePeer);
+        this.sockets.listener.subscribe('meetingFull', this.onMeetingFull);
       },
 
       onRoomJoined(data) {
-        console.log('gets here', room);
-        const [room, currentUser] = data;
+        const { room, currentUser, shouldCreateOffer } = data;
         this.room = room;
         this.currentUser = currentUser;
+      },
 
+      onMeetingFull() {
+        this.onMeetingFull = true;
       },
 
       joinRoom(user) {
         this.$socket.emit('joinRoom', this.roomId, user)
       },
 
-      exitRoom(message) {
-        console.log('ext test', message)
+      exitRoom() {
+        // delete peer connections
+        this.$socket.emit('disconnect');
+        // redirect to '/rooms'
       },
     },
     mounted() {
@@ -71,14 +86,14 @@
       const user = { 
         username: this.user ? this.user.username : null,
       };
-      this.joinRoom(user);
+      this.getUserMedia().then(() => { this.joinRoom(user); })
     },
   };
 </script>
 
 <style scoped>
   .video-item {
-    background: #000;
+    //background: #000;
     border: solid 1px #fff;
     height: 300px;
   }

@@ -41,11 +41,10 @@ function initSocket(app) {
   const server = http.createServer(app);
   const io = socketio(server, { origins: '*:*' });
 
-  const roomJoinResponse = (room, userData, socketId, createOffer = false) => ({
+  const roomJoinResponse = (room, userData, socketId, shouldCreateOffer = false) => ({
     room: room.roomId, 
     users: room.roomUsers,
-    currentUser: { ...userdata, socketId },
-    createOffer
+    currentUser: { ...userData, socketId }
   });
 
   io.on('connection', socket => {
@@ -53,41 +52,38 @@ function initSocket(app) {
       if (io.sockets.adapter.rooms[roomId]) {
         const room = rooms[roomId];
 
-        if(room.getUser(socket.id)) {
-          socket.emit('roomJoined', roomJoinResponse(room, user, socket.id));    
-          socket.to(roomId).emit('newMember', socket.id);
-        } else {
-          socket.join(roomId);
-          user.socketId = socket.id;
-          rooms[roomId].addUser(user);
-          
-          socket.emit('roomJoined', roomJoinResponse(room, user, socket.id, true));    
-          socket.to(roomId).emit('newMember', socket.id);
+        if(room.roomUsers.length === 4) {
+          socket.emit('meetingFull');
+          return;
         }
+
+        socket.join(roomId);
+        user.socketId = socket.id;
+        room.addUser(user);
         
+        socket.emit('roomJoined', roomJoinResponse(room, user, socket.id, true));    
+        socket.to(roomId).emit('addPeer', user);
       } else {
         socket.join(roomId);
 
         const room = new Room(roomId);
         user.socketId = socket.id;
         room.addUser(user);
-        rooms[roomId] = room; 
+        rooms[roomId] = room;
 
         socket.emit('roomJoined', roomJoinResponse(room, user, socket.id));
       }
     });
 
-    socket.on('disconnect', (roomId, user) => {
-      
+    socket.on('offer', (description, socketId) => {
+      io.to(socketId).emit('newPeerOffer', description);
     });
 
-    socket.on('relaySessionDescription', sessionDescription => {});
+    socket.on('answer', _ => {});
+
+    socket.on('disconnect', (roomId, user) => {});
 
     socket.on('speechToTextData', data => {});
-
-    socket.on('deleteRoom', roomId => {
-      
-    });
   });
 
 
