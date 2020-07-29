@@ -15,7 +15,9 @@ export default {
 
   computed: {
     video_tracks() { return this.localStream.getVideoTracks() },
+    videoEnabled() { return this.video_tracks[0].enabled },
     audio_tracks() { return this.localStream.getAudioTracks() },
+    micMuted() { return this.audio_tracks[0].enabled },
     peerRefs() { 
       return Object.keys(this.peers).forEach(peer => `video-${peer}`);
     }
@@ -30,14 +32,15 @@ export default {
   methods: {
     subscribeRTCListeners() {
       this.sockets.listener.subscribe('addPeer', this.addPeer);
-      this.sockets.listener.subscribe('newPeerOffer', this.onOfferReceived);
-      // this.sockets.listener.subscribe('newPeerAnswer', this.onAnswerReceived);
+      this.sockets.listener.subscribe('addICECandidate', this.addICECandidate);
+      this.sockets.listener.subscribe('peerSessionDescription', this.onSessionDescription);
+      this.sockets.listener.subscribe('transcriptionData', this.receiveTranscription);
     },
 
     async getUserMedia() {
       if ("mediaDevices" in navigator) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia(this.constraints);
+          const stream = new MediaStream()//await navigator.mediaDevices.getUserMedia(this.constraints);
           this.addLocalStream(stream);
         } catch (error) {
           //alert('In order to continue, Camera & Audio access is required.');
@@ -49,13 +52,21 @@ export default {
     },
   
     addLocalStream(stream) {
-      //this.$refs.localVideo.srcObject = stream;
       this.$nextTick(() => {
         this.$refs.localVideo.srcObject = stream;
-        console.log('local', this.$refs.localVideo);
       });
 
       this.localStream = stream;
+    },
+
+    addRemoteStream(socketId) {
+      const self = this;
+      return event => {
+        console.log('added strm', event.streams);
+
+        self.peers[socketId].stream = event.streams[0];
+        this.setupSpeechToText(event.streams[0]);
+      }
     },
 
     async addPeer(peer) {
@@ -75,82 +86,70 @@ export default {
 
       peerConnection.addStream(this.localStream);
 
-      console.log('pc', peerConnection);
-
-      this.setupSpeechToText(peerConnection);
-
       await this.createOffer(peerConnection, socketId);
     },
 
     async createOffer(peerConnection, socketId) {
       const localDescription = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(localDescription);
-      this.$socket.emit('offer', localDescription, socketId);
+      this.$socket.emit('sessionDescription', localDescription, socketId);
     },
 
-    onOfferReceived(description) {
-      console.log('offer desc', description)
-      //const {}
-    },
+    onSessionDescription({ caller, description }) {
+      const connection = this.peers[caller].peerConnection;
+      const remoteDescription = new RTCSessionDescription(description)
+      
+      connection.setRemoteDescription(remoteDescription).then(() => {
+        if(description.type === 'offer'){
+          connection.createAnswer()
+            .then(answer => {
+              connection.setLocalDescription(answer)
+                .then(() => {
+                  this.$socket.emit('sessionDescription', answer, caller);
+                })
+            });
+        }
+      });
 
-    // onAnswerReceived(data) {
-    //   const {}
-    // },
+    },
 
     onICECandidate(socketId) {
       const self = this;
       return event => {
-        console.log('icecandid8 event\n', event);
-
-        self.$socket.emit('relayICECandidate', {
+        console.log('sentID', socketId);
+        self.$socket.emit('iceCandidate', {
           socketId,
           iceCandidate: { ...event.candidate }
         });
       }
     },
 
-    addRemoteStream(socketId) {
-      const self = this;
-      return event => {
-        console.log('addstream event\n', event)
-        self.peers[socketId].stream = event.streams[0];
-      }
+    addICECandidate(candidate) {
+      const { socketId, iceCandidate } = candidate;
+      console.log('receivedId', socketId);
+      const connection = this.peers[socketId].peerConnection;
+
+      connection.addIceCandidate(new RTCIceCandidate(iceCandidate));
     },
 
-    decodeDataChannelPayload(data) {
-      if (data instanceof ArrayBuffer) {
-        const dec = new TextDecoder('utf-8');
-        return Promise.resolve(dec.decode(data));
-      } else if (data instanceof Blob) {
-        const reader = new FileReader();
-        const readPromise = new Promise((accept, reject) => {
-          reader.onload = () => accept(reader.result);
-          reader.onerror = reject;
-        });
-        reader.readAsText(data, 'utf-8');
-        return readPromise;
-      }
-    },
-
-    setupSpeechToText(peerConnection) {
-      const dataChannel = peerConnection.createDataChannel('results', {
-        ordered: true,
-        protocol: 'tcp'
-      });
-      dataChannel.onmessage = evt => {
-        this.decodeDataChannelPayload(evt.data)
-          .then(strData => {
-            const result = JSON.parse(strData);
-            // socket emit 'speechToTextData'
-          });
+    setupSpeechToText(stream) {
+      const options = {
+        audioBitsPerSecond : 128000,
+        videoBitsPerSecond : 2500000,
+        mimeType : 'video/mp4'
       };
-
-      dataChannel.onclose = () => { 
-        peerConnection.close();
-      };
+      const speechRecorder = new MediaRecorder(stream, options);
+      speechRecorder.ondataavailable = this.sendSpeechData;
     },
 
-    receiveSpeechData(data) {},
+    sendSpeechData(event) {
+      console.log('data available event', event);
+      this.$socket.emit('speechToTextData', data);
+    },
+
+    receiveTranscription(data) {
+      console.log('transcription', data);
+    },
 
     removePeer(socketId) {
       const self = this;
@@ -163,17 +162,15 @@ export default {
     },
 
     toggleVideo() {
-      this.video_tracks.forEach(t => { t.enabled = !t.enabled });
+      this.video_tracks[0].enabled = !(this.video_tracks[0].enabled);
     },
 
-    toggleAudio() {
-      this.audio_tracks.forEach(t => { t.enabled = !t.enabled });
+    toggleMic() {
+      this.audio_tracks[0].enabled = !(this.audio_tracks[0].enabled);
     },
   },
 
   async mounted() {
     this.subscribeRTCListeners();
-    await this.getUserMedia();
-        
   }
 }

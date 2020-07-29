@@ -75,13 +75,15 @@ function initSocket(app) {
       }
     });
 
-    socket.on('offer', (description, socketId) => {
-      io.to(socketId).emit('newPeerOffer', description);
+    socket.on('sessionDescription', (description, socketId) => {
+      io.to(socketId).emit('peerSessionDescription', { caller: socket.id, description });
     });
 
-    socket.on('answer', _ => {});
+    socket.on('iceCandidate', iceCandidate => {
+      io.to(iceCandidate.socketId).emit('addICECandidate', { socketId: socket.id, iceCandidate });
+    });
 
-    socket.on('disconnect', (roomId, user) => {});
+    socket.on('disconnect', () => {});
 
     socket.on('speechToTextData', data => {});
   });
