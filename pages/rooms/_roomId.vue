@@ -21,21 +21,22 @@
           <b-col 
             cols="6"
             class="video-item"
-            v-for="user in room.users"
-            :key="user.socketId">
-            <p class="video-header">{{ user.username || '---' }}</p> 
+            v-for="peer in Object.keys(peers)"
+            :key="peers[peer].socketId">
+            <p class="video-header">{{ peer.username || '---' }}</p> 
             <video autoplay
               class="remote-video" 
               ref="`video-${peer}`"
-              :src-object.camel="peers[user.socketId].stream"></video>      
+              :src-object.camel="peers[peer].stream"></video>      
           </b-col>
         </b-row>
       </b-container>
       <b-container fluid class="captions">Captions</b-container>
-    </b-container>
-    <b-container fluid class="media-buttons" v-if="localStream">
-      <b-button variant="primary" @click="toggleMic">Toggle Mic</b-button>
-      <b-button variant="primary" @click="toggleVideo">Toggle Video</b-button>
+      <b-container fluid class="media-buttons" v-if="localStream">
+        <b-button variant="primary" @click="toggleMic">{{ micOn ? 'Mute Mic' : 'Unmute Mic'}}</b-button>
+        <b-button variant="primary" @click="toggleVideo">{{ videoOn ? 'Disable Camera' : 'Enable Camera' }}</b-button>
+        <b-button variant="danger" @click="exitRoom">Leave Meeting</b-button>
+      </b-container>
     </b-container>
   </b-container>
 </template>
@@ -51,7 +52,7 @@
     data() {
       return {
         roomId: null,
-        room: null,
+        room: {},
         currentUser: null,
         meetingFull: false,
         sharableLink: null
@@ -65,9 +66,14 @@
       },
 
       onRoomJoined(data) {
-        const { room, currentUser } = data;
+        const { room, users, currentUser } = data;
         this.room = room;
         this.currentUser = currentUser;
+
+        if(users.length > 1) {
+          const otherMembers = users.filter(({ socketId }) => socketId !== currentUser.socketId);
+          otherMembers.forEach(peer => { this.addPeer({ peer }); });
+        }
       },
 
       onMeetingFull() {
@@ -79,9 +85,9 @@
       },
 
       exitRoom() {
-        // delete peer connections
-        this.$socket.emit('exitRoom', this.roomId);
-        // redirect to '/rooms'
+        this.peers = {};
+        this.$socket.emit('exitRoom', this.roomId, this.currentUser.socketId);
+        this.$router.push({ name: 'rooms' });
       },
     },
     mounted() {

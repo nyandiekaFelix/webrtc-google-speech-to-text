@@ -1,5 +1,8 @@
 const http = require('http');
 const socketio = require('socket.io');
+const SocketStream = require('socket.io-stream');
+
+const { speechStreamToText } = require('./speechToText.js');
 
 const SOCKET_PORT = process.env.port || 8989;
 
@@ -31,8 +34,8 @@ class Room {
     return user;
   }
 
-  removeUser(userId) {
-    this.users = this.users.filter(user => user.userId !== userId);
+  removeUser(socketId) {
+    this.users = this.users.filter(user => user.socketId !== socketId);
   }
 }
 
@@ -61,8 +64,8 @@ function initSocket(app) {
         user.socketId = socket.id;
         room.addUser(user);
         
-        socket.emit('roomJoined', roomJoinResponse(room, user, socket.id, true));    
-        socket.to(roomId).emit('addPeer', user);
+        socket.emit('roomJoined', roomJoinResponse(room, user, socket.id));    
+        socket.to(roomId).emit('addPeer', { peer: user, shouldCreateOffer: true });
       } else {
         socket.join(roomId);
 
@@ -75,17 +78,33 @@ function initSocket(app) {
       }
     });
 
-    socket.on('sessionDescription', (description, socketId) => {
-      io.to(socketId).emit('peerSessionDescription', { caller: socket.id, description });
+    socket.on('offer', (description, recipientSocket) => {
+      io.to(recipientSocket).emit('peerOffer', { caller: socket.id, description });
     });
 
-    socket.on('iceCandidate', iceCandidate => {
-      io.to(iceCandidate.socketId).emit('addICECandidate', { socketId: socket.id, iceCandidate });
+    socket.on('answer', (description, callerSocket) => {
+      io.to(callerSocket).emit('peerAnswer', { recipient: socket.id, description });
+    });
+
+    socket.on('iceCandidate', ({ socketId, iceCandidate }) => {
+      io.to(socketId).emit('addICECandidate', { socketId: socket.id, iceCandidate });
+    });
+    
+    socket.on('exitRoom', (roomId, socketId) => {
+      const room = rooms[roomId];
+      if(room) {
+        room.removeUser(socketId);
+        // broadcast 'removePeer'
+      }
     });
 
     socket.on('disconnect', () => {});
 
-    socket.on('speechToTextData', data => {});
+    SocketStream(socket).on('speechStream', stream => {
+      console.log('stream', JSON.stringify(stream)) //speechStreamToText(stream, data => {
+        //socket.emit('transcriptionData', data)
+      //})
+    });
   });
 
 
