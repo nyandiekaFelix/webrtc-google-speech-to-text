@@ -8,9 +8,7 @@ export default {
       peers: {},
       micOn: false,
       videoOn: true,
-      recorderTimeSlice: 5000,
       constraints: { video: false, audio: true },
-      recorder: null,
       audioContext: null,
       scriptNode: null,
       sStream: null,
@@ -34,22 +32,10 @@ export default {
 
   watch: {
     micOn() {
-      if(this.micOn) { 
-        //console.log('mic', this.micOn);
-        const self = this;
+      if(this.micOn) {
         this.scriptNode.connect(this.audioContext.destination);
-        setInterval(() => {
-          //self.scriptNode.disconnect(this.audioContext.destination);
-          console.log('srnod', self.scriptNode)
-        }, 5000)
-        //this.sendSpeechData();
-
-        //this.recorder.start(this.recorderTimeSlice); 
-        //console.log('recorder', this.recorder.state)
       } else {
         this.scriptNode.disconnect(this.audioContext.destination);
-        //this.recorder.stop();console.log('recorder', this.recorder.state)
-
       }
     }
   },
@@ -57,7 +43,6 @@ export default {
   beforeDestroy() {
     this.localStream.getTracks().forEach(track => track.stop());
     this.peers = {};
-    //this.$socket.emit('exitRoom', this.roomId, this.currentUser.socketId);
   },
 
   methods: {
@@ -67,6 +52,7 @@ export default {
       this.sockets.listener.subscribe('peerOffer', this.onPeerOffer);
       this.sockets.listener.subscribe('peerAnswer', this.onPeerAnswer);
       this.sockets.listener.subscribe('transcriptionData', this.receiveTranscription);
+      this.sockets.listener.subscribe('removePeer', socketId => { delete this.peers[socketId]; });
     },
 
     async getUserMedia() {
@@ -89,8 +75,8 @@ export default {
       });
 
       this.localStream = stream;
-      //this.audio_tracks[0].enabled = false;
-      this.setupRecorder();
+      this.audio_tracks[0].enabled = false;
+      //this.setupRecorder();
     },
 
     addRemoteStream(socketId) {
@@ -173,11 +159,8 @@ export default {
       const audioStream = new MediaStream(this.audio_tracks);
 
       const input = this.audioContext.createMediaStreamSource(audioStream);
-      this.audioInput = input;
-      console.log('aud ctx', this.audioContext);
-      console.log('aud inp', input);
+
       const bufferSize = 2048;
-      
       const scriptNode = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
       this.scriptNode = scriptNode; 
       scriptNode.onaudioprocess = audioProcessingEvent => {
@@ -195,24 +178,6 @@ export default {
       }
       input.connect(scriptNode);
       this.scriptNode = scriptNode;
-      /* const recorder = new MediaRecorder(audioStream, {
-        type: 'audio', 
-        mimeType: 'audio/webm',
-        sampleRate: 44100,
-        //recorderType: MediaStreamRecorder,
-        //numberOfAudioChannels: 1,
-        timeSlice: 5000,
-        desiredSampRate: 16000,
-        ignoreMutedMedia: true
-      });
-
-      recorder.ondataavailable = (event) => { console.log('dataavailable', event)};
-      recorder.onstart = (event) => { console.log('started recording', event)};
-      recorder.onstop = event => { console.log('stopped recording', event)};
-      recorder.onerror = event => { console.log('error', event)};
-      
-      this.recorder = recorder;
-      */
     },
 
     ssBuffer(buffer, sampleRate, outSampleRate) {
@@ -220,7 +185,7 @@ export default {
         return buffer;
       }
       if (outSampleRate > sampleRate) {
-        throw "downsampling rate show be smaller than original sample rate";
+        throw "downsampling rate should be smaller than original sample rate";
       }
       const sampleRateRatio = sampleRate / outSampleRate;
       const newLength = Math.round(buffer.length / sampleRateRatio);
@@ -242,16 +207,6 @@ export default {
         offsetBuffer = nextOffsetBuffer;
       }
       return result.buffer;
-    },
-
-    sendSpeechData() {
-      
-      //SocketStream(this.$socket).emit('speechStream', stream, {
-        //name: '_temp/stream.wav',
-        //size: blob.size
-      //});
-      // pipe the audio blob to the read stream
-      //SocketStream.createBlobReadStream(blob).pipe(stream);
     },
 
     receiveTranscription(data) {

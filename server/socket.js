@@ -94,16 +94,16 @@ function initSocket(app) {
       const room = rooms[roomId];
       if(room) {
         room.removeUser(socketId);
-        // broadcast 'removePeer'
+        socket.to(roomId).emit('removePeer', socketId);
       }
     });
 
     socket.on('disconnect', () => {});
 
     SocketStream(socket).on('speechStream', stream => {
-      console.log('stream', JSON.stringify(stream)) //speechStreamToText(stream, data => {
-        //socket.emit('transcriptionData', data)
-      //})
+      speechStreamToText(stream, data => {
+        socket.emit('transcriptionData', data)
+      });
     });
   });
 

@@ -27,6 +27,7 @@ async function speechToText(audio) {
 }
 
 function speechStreamToText(stream, callback) {
+  const client = new Speech.SpeechClient();
   const recognizeStream = client
     .streamingRecognize(payload)
     .on('error', error => { console.log('Speech stream error:\n', error) })
