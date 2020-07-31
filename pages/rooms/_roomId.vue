@@ -23,7 +23,7 @@
             class="video-item"
             v-for="peer in Object.keys(peers)"
             :key="peers[peer].socketId">
-            <p class="video-header">{{ peer.username || '---' }}</p> 
+            <p class="video-header">{{ peers[peer].username || '---' }}</p> 
             <video autoplay
               class="remote-video" 
               ref="`video-${peer}`"
@@ -31,7 +31,7 @@
           </b-col>
         </b-row>
       </b-container>
-      <b-container fluid class="captions">Captions</b-container>
+      <b-container fluid class="captions">{{ captions }}</b-container>
       <b-container fluid class="media-buttons" v-if="localStream">
         <b-button variant="primary" @click="toggleMic">{{ micOn ? 'Mute Mic' : 'Unmute Mic'}}</b-button>
         <b-button variant="primary" @click="toggleVideo">{{ videoOn ? 'Disable Camera' : 'Enable Camera' }}</b-button>

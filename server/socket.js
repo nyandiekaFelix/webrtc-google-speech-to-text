@@ -98,8 +98,6 @@ function initSocket(app) {
       }
     });
 
-    socket.on('disconnect', () => {});
-
     SocketStream(socket).on('speechStream', stream => {
       speechStreamToText(stream, data => {
         socket.emit('transcriptionData', data)

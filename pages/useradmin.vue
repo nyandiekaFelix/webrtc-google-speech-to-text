@@ -2,7 +2,7 @@
   <b-container>
     <h4>User Administration</h4>
     <b-button @click="showModal">New User</b-button>
-    <b-modal ref="modal" hide-footer title="Using Component Methods">
+    <b-modal ref="modal" hide-footer title="Add a new user">
       <div class="d-block text-center">
         
         <b-form>

@@ -8,10 +8,11 @@ export default {
       peers: {},
       micOn: false,
       videoOn: true,
-      constraints: { video: false, audio: true },
+      constraints: { video: true, audio: true },
       audioContext: null,
       scriptNode: null,
       sStream: null,
+      captions: '',
       RTCconfig: { 
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
@@ -52,7 +53,7 @@ export default {
       this.sockets.listener.subscribe('peerOffer', this.onPeerOffer);
       this.sockets.listener.subscribe('peerAnswer', this.onPeerAnswer);
       this.sockets.listener.subscribe('transcriptionData', this.receiveTranscription);
-      this.sockets.listener.subscribe('removePeer', socketId => { delete this.peers[socketId]; });
+      this.sockets.listener.subscribe('removePeer', this.removePeer);
     },
 
     async getUserMedia() {
@@ -76,7 +77,7 @@ export default {
 
       this.localStream = stream;
       this.audio_tracks[0].enabled = false;
-      //this.setupRecorder();
+      this.setupRecorder();
     },
 
     addRemoteStream(socketId) {
@@ -95,11 +96,11 @@ export default {
       }
 
       const peerConnection = new RTCPeerConnection(this.RTCconfig);
-      this.peers[socketId] = { peerConnection, ...peer, stream: null };
+      this.peers = { ...this.peers, [socketId]: { peerConnection, ...peer, stream: null }};
 
       peerConnection.onicecandidate = this.onICECandidate(socketId);
       peerConnection.ontrack = this.addRemoteStream(socketId);
-      peerConnection.oniceconnectionstatechange = this.removePeer(socketId);
+      peerConnection.oniceconnectionstatechange = this.checkPeerConnection(socketId);
 
       this.localStream.getTracks()
         .forEach(track => { peerConnection.addTrack(track, this.localStream )});
@@ -181,12 +182,9 @@ export default {
     },
 
     ssBuffer(buffer, sampleRate, outSampleRate) {
-      if (outSampleRate == sampleRate) {
-        return buffer;
-      }
-      if (outSampleRate > sampleRate) {
-        throw "downsampling rate should be smaller than original sample rate";
-      }
+      if (outSampleRate == sampleRate) return buffer;
+      if (outSampleRate > sampleRate) throw "downsampling rate should be smaller than original sample rate";
+
       const sampleRateRatio = sampleRate / outSampleRate;
       const newLength = Math.round(buffer.length / sampleRateRatio);
       const result = new Int16Array(newLength);
@@ -209,16 +207,23 @@ export default {
       return result.buffer;
     },
 
-    receiveTranscription(data) {
-      console.log('transcription', data);
+    receiveTranscription(transcription) {
+      console.log('transcription', transcription);
+      this.captions += transcription;
     },
 
     removePeer(socketId) {
+      const peers = { ...this.peers };
+      delete peers[socketId];
+      this.peers = peers;
+    },
+
+    checkPeerConnection(socketId) {
       const self = this;
       return event => {
         const peerState = self.peers[socketId].peerConnection.iceConnectionState;
         if (peerState === "failed" || peerState === "closed" || peerState === "disconnected") {
-          delete self.peers[socketId];
+          self.removePeer(socketId);
         }
       };
     },
@@ -231,7 +236,6 @@ export default {
     toggleMic() {
       this.audio_tracks[0].enabled = !(this.audio_tracks[0].enabled);
       this.micOn = this.audio_tracks[0].enabled;
-      //this.recorder.stop();
     },
   },
 
