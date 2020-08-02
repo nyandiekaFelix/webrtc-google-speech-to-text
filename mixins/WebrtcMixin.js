@@ -155,7 +155,7 @@ export default {
     setupRecorder() {
       const self = this;
       this.sStream = SocketStream.createStream();
-      SocketStream(this.$socket).emit('speechStream', this.sStream);
+      SocketStream(this.$socket).emit('speechStream', this.sStream, this.roomId);
 
       const audioStream = new MediaStream(this.audio_tracks);
 
@@ -209,7 +209,7 @@ export default {
 
     receiveTranscription(transcription) {
       console.log('transcription', transcription);
-      this.captions += transcription;
+      this.captions = transcription;
     },
 
     removePeer(socketId) {

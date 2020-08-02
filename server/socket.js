@@ -98,9 +98,9 @@ function initSocket(app) {
       }
     });
 
-    SocketStream(socket).on('speechStream', stream => {
+    SocketStream(socket).on('speechStream', (stream, roomId) => {
       speechStreamToText(stream, data => {
-        socket.emit('transcriptionData', data)
+        socket.to(roomId).emit('transcriptionData', data)
       });
     });
   });
