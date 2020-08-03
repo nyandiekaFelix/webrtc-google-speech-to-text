@@ -6,7 +6,7 @@ const Users = db.users;
 function generateJWT(userId) {
   return jwt.sign(
     userId, 
-    process.env.SECRET_KEY || '__secret__', 
+    process.env.JWT_SECRET_KEY, 
     //{ expiresIn: null } // expiry time should ideally be set for security, Value given should be in seconds
   );
 }

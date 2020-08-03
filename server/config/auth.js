@@ -16,7 +16,7 @@ function userExists(user) {
 
 const jwtStrategy = new JWTStrategy({
     jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
-    secretOrKey: process.env.SECRET_KEY || '__secret__' // The RISKY hardcoded string is just for testing purposes
+    secretOrKey: process.env.JWT_SECRET_KEY
   }, 
   (jwtPayload, done) => {
     process.nextTick(_ => {

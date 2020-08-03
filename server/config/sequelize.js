@@ -1,9 +1,9 @@
 module.exports = {
-  host: "localhost",
-  user: "user",
-  password: "password",
-  dbName: "videochat",
-  dialect: "mysql",
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  dbName: process.env.DB_NAME,
+  dialect: process.env.DB_DIALECT || "mysql",
   port: 3306,
   pool: {
     max: 5,
