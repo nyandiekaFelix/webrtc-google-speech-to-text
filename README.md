@@ -9,7 +9,7 @@ $ source .env
 
 
 ## G-Cloud Speech Setup
-First install the [G-cloud cLI
+(optional but can be used for testing) - Install the [G-cloud cLI
 tool](https://cloud.google.com/sdk/docs#install_the_latest_cloud_tools_version_cloudsdk_current_version) for your specific OS
 
 1. Visit the [Google Developers Console](https://console.developers.google.com/project)

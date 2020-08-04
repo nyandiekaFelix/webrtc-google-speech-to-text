@@ -1,18 +1,8 @@
 const passportJWT = require('passport-jwt');
-//const User = require('../models/user.js');
+const User = require('../models/user.js');
 
 const ExtractJWT = passportJWT.ExtractJwt;
 const JWTStrategy = passportJWT.Strategy;
-
-function userExists(user) {
-  const users = [
-    {
-      username: 'admin',
-      email: 'admin@mail.com',
-      password: 'password'
-    }
-  ];
-}
 
 const jwtStrategy = new JWTStrategy({
     jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
@@ -20,10 +10,7 @@ const jwtStrategy = new JWTStrategy({
   }, 
   (jwtPayload, done) => {
     process.nextTick(_ => {
-      const userAttributes = {
-        email: jwtPayload.email
-      }
-      userExists(userAttributes)
+      User.getOneUser(jwtPayload.email)
         .then(user => {
           if (!user) return done(null, false)
           return done(null, user)
