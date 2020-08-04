@@ -1,4 +1,6 @@
+const fs = require('fs');
 const http = require('http');
+const https = require('https');
 const socketio = require('socket.io');
 const SocketStream = require('socket.io-stream');
 
@@ -41,7 +43,15 @@ class Room {
 
 
 function initSocket(app) {
-  const server = http.createServer(app);
+  const httpsOptions = {
+    key: fs.readFileSync(''), // add path to key
+    cert: fs.readfileSync('') // add path to cert
+  };
+   
+  const server = process.env.NODE_ENV === 'production' ?
+    https.createServer(options, app) :
+    http.createServer(app);
+
   const io = socketio(server, { origins: '*:*' });
 
   const roomJoinResponse = (room, userData, socketId, shouldCreateOffer = false) => ({
