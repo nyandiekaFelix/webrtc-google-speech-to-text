@@ -83,12 +83,12 @@ module.exports = {
    ** Build configuration
    ** See https://nuxtjs.org/api/configuration-build/
    */
-  build: {}
+  build: {},
   
-  /*
+  
   server: {
     port: 3000, // default: 3000
-    host: 'tele.motocle2.com' // default: localhost
-  } */
+    host: 'https://tele.motocle2.com' // default: localhost
+  }
 	
 }
