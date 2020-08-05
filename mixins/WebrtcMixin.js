@@ -1,4 +1,3 @@
-import adapter from 'webrtc-adapter';
 import SocketStream from 'socket.io-stream';
 
 export default {
