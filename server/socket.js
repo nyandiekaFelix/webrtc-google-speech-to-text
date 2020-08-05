@@ -49,7 +49,7 @@ function initSocket(app) {
   };
    
   const server = process.env.NODE_ENV === 'production' ?
-    https.createServer(options, app) :
+    https.createServer(httpsOptions, app) :
     http.createServer(app);
 
   const io = socketio(server, { origins: '*:*' });
