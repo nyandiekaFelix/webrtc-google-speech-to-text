@@ -151,8 +151,7 @@ export default {
     addICECandidate(candidate) {
       const { iceCandidate, socketId } = candidate;
       const connection = this.peers[socketId].peerConnection;
-
-      connection.addIceCandidate(new RTCIceCandidate(iceCandidate));
+      if(iceCandidate.sdpMid && iceCandidate.sdpMLineIndex) connection.addIceCandidate(new RTCIceCandidate(iceCandidate));
     },
 
     setupRecorder() {
