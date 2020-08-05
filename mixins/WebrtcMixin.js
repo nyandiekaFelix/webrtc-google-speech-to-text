@@ -1,4 +1,4 @@
-import RecordRTC from 'recordrtc';
+import adapter from 'webrtc-adapter';
 import SocketStream from 'socket.io-stream';
 
 export default {
@@ -34,6 +34,9 @@ export default {
   watch: {
     micOn() {
       if(this.micOn) {
+        if(this.audioContext.state === 'suspended') {
+          this.audioContext.resume();
+        }
         this.scriptNode.connect(this.audioContext.destination);
       } else {
         this.scriptNode.disconnect(this.audioContext.destination);
