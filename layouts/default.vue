@@ -5,6 +5,7 @@
   </div>
 </template>
 <script>
+require('webrtc-adapter');
 import Navigation from '../components/Navigation.vue';
 
 export default {
