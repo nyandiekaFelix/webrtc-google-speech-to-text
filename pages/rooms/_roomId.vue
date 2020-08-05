@@ -61,8 +61,8 @@
 
     methods: {
       subscribeListeners() {
-        this.sockets.listener.subscribe('roomJoined', this.onRoomJoined);
-        this.sockets.listener.subscribe('meetingFull', this.onMeetingFull);
+        this.$socket.$subscribe('roomJoined', this.onRoomJoined);
+        this.$socket.$subscribe('meetingFull', this.onMeetingFull);
       },
 
       onRoomJoined(data) {
@@ -81,12 +81,12 @@
       },
 
       joinRoom(user) {
-        this.$socket.emit('joinRoom', this.roomId, user)
+        this.$socket.client.emit('joinRoom', this.roomId, user)
       },
 
       exitRoom() {
         this.peers = {};
-        this.$socket.emit('exitRoom', this.roomId, this.currentUser.socketId);
+        this.$socket.client.emit('exitRoom', this.roomId, this.currentUser.socketId);
         this.$router.push({ name: 'rooms' });
       },
     },

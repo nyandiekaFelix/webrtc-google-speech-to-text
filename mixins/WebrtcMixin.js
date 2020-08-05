@@ -8,7 +8,7 @@ export default {
       peers: {},
       micOn: false,
       videoOn: true,
-      constraints: { video: true, audio: true },
+      constraints: { video: false, audio: true },
       audioContext: null,
       scriptNode: null,
       sStream: null,
@@ -48,12 +48,12 @@ export default {
 
   methods: {
     subscribeRTCListeners() {
-      this.sockets.listener.subscribe('addPeer', this.addPeer);
-      this.sockets.listener.subscribe('addICECandidate', this.addICECandidate);
-      this.sockets.listener.subscribe('peerOffer', this.onPeerOffer);
-      this.sockets.listener.subscribe('peerAnswer', this.onPeerAnswer);
-      this.sockets.listener.subscribe('transcriptionData', this.receiveTranscription);
-      this.sockets.listener.subscribe('removePeer', this.removePeer);
+      this.$socket.$subscribe('addPeer', this.addPeer);
+      this.$socket.$subscribe('addICECandidate', this.addICECandidate);
+      this.$socket.$subscribe('peerOffer', this.onPeerOffer);
+      this.$socket.$subscribe('peerAnswer', this.onPeerAnswer);
+      this.$socket.$subscribe('transcriptionData', this.receiveTranscription);
+      this.$socket.$subscribe('removePeer', this.removePeer);
     },
 
     async getUserMedia() {
@@ -111,7 +111,7 @@ export default {
     async createOffer(peerConnection, recipientSocket) {
       const localDescription = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(localDescription);
-      this.$socket.emit('offer', localDescription, recipientSocket);
+      this.$socket.client.emit('offer', localDescription, recipientSocket);
     },
 
     onPeerOffer({ caller, description }) {
@@ -122,7 +122,7 @@ export default {
         connection.createAnswer()
           .then(async (answer) => {
             await connection.setLocalDescription(answer);
-            this.$socket.emit('answer', answer, caller);
+            this.$socket.client.emit('answer', answer, caller);
           });
       });
     },
@@ -155,7 +155,7 @@ export default {
     setupRecorder() {
       const self = this;
       this.sStream = SocketStream.createStream();
-      SocketStream(this.$socket).emit('speechStream', this.sStream, this.roomId);
+      SocketStream(this.$socket.client).emit('speechStream', this.sStream, this.roomId);
 
       const audioStream = new MediaStream(this.audio_tracks);
 

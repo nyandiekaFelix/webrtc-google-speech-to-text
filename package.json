@@ -12,7 +12,7 @@
     "lint:js": "eslint --ext .js,.vue --ignore-path .gitignore .",
     "lint": "yarn lint:js",
     "test": "jest",
-	"generate": "nuxt generate"
+    "generate": "nuxt generate"
   },
   "dependencies": {
     "@google-cloud/speech": "^4.1.1",
@@ -32,7 +32,7 @@
     "sequelize": "^6.3.3",
     "socket.io": "^2.3.0",
     "socket.io-stream": "^0.9.1",
-    "vue-socket.io": "^3.0.9"
+    "vue-socket.io-extended": "^4.0.4"
   },
   "devDependencies": {
     "@nuxtjs/eslint-config": "^3.0.0",
