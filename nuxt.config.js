@@ -1,3 +1,4 @@
+const fs = require('fs');
 
 const API_URL = process.env.NODE_ENV === 'production' ?
   'https://tele.motocle2.com:3000/api' :
@@ -15,7 +16,6 @@ module.exports = {
    ** See https://nuxtjs.org/api/configuration-target
    */
   target: 'server',
-
   serverMiddleware: [
     '~/server/index.js',
   ],
@@ -88,7 +88,11 @@ module.exports = {
   
   server: {
     port: 3000, // default: 3000
-    host: 'https://tele.motocle2.com' // default: localhost
+    host: 'tele.motocle2.com', // default: localhost
+    https: {
+      key: fs.readFileSync('/etc/ssl/tele.motocle2.com.key'),
+      cert: fs.readFileSync('/etc/ssl/tele.motocle2.com.crt')
+    }
   }
 	
 }
