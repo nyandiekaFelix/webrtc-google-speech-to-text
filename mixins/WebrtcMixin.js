@@ -224,7 +224,7 @@ export default {
       const self = this;
       return event => {
         const peerState = self.peers[socketId].peerConnection.iceConnectionState;
-        if (peerState === "failed" || peerState === "closed" || peerState === "disconnected") {
+        if (peerState === "closed") {
           self.removePeer(socketId);
         }
       };
