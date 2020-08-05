@@ -8,7 +8,7 @@ export default {
       peers: {},
       micOn: false,
       videoOn: true,
-      constraints: { video: false, audio: true },
+      constraints: { video: true, audio: true },
       audioContext: null,
       scriptNode: null,
       sStream: null,
