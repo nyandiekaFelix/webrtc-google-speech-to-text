@@ -137,7 +137,7 @@ export default {
       const self = this;
       return event => {
         if(event.candidate) {
-          self.$socket.emit('iceCandidate', {
+          self.$socket.client.emit('iceCandidate', {
             socketId,
             iceCandidate: { ...event.candidate }
           });
