@@ -15,7 +15,6 @@ module.exports = {
    ** See https://nuxtjs.org/api/configuration-target
    */
   target: 'server',
-
   serverMiddleware: [
     '~/server/index.js',
   ],
@@ -85,10 +84,13 @@ module.exports = {
    */
   build: {}
   
-  /*
   server: {
     port: 3000, // default: 3000
     host: 'tele.motocle2.com' // default: localhost
-  } */
+    https: {
+      key: fs.readFileSync(''),
+      cert: fs.readFileSync('')
+    }
+  }
 	
 }
