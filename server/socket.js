@@ -44,8 +44,8 @@ class Room {
 
 function initSocket(app) {
   const httpsOptions = {
-    key: fs.readFileSync(''), // add path to key
-    cert: fs.readfileSync('') // add path to cert
+    key: fs.readFileSync('/etc/ssl/tele.motocle2.com.key'), // add path to key
+    cert: fs.readfileSync('/etc/ssl/tele.motocle2.com.crt') // add path to cert
   };
    
   const server = process.env.NODE_ENV === 'production' ?

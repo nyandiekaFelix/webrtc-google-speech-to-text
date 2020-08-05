@@ -1,7 +1,7 @@
 
 const API_URL = process.env.NODE_ENV === 'production' ?
-  'https://<hosted-url>/api' :
-  'http://localhost:3000/api';
+  'https://tele.motocle2.com:3000/api' :
+  'http://localhost/api';
 
 
 module.exports = {
@@ -83,5 +83,12 @@ module.exports = {
    ** Build configuration
    ** See https://nuxtjs.org/api/configuration-build/
    */
-  build: {},
+  build: {}
+  
+  /*
+  server: {
+    port: 3000, // default: 3000
+    host: 'tele.motocle2.com' // default: localhost
+  } */
+	
 }

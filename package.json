@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "nuxt dev",
+    "build": "nuxt build",
     "start": "nuxt start",
     "start:prod": "export NODE_ENV=\"production\" yarn build && yarn start",
-    "build": "nuxt build",
     "export": "nuxt export",
     "serve": "nuxt serve",
     "lint:js": "eslint --ext .js,.vue --ignore-path .gitignore .",
     "lint": "yarn lint:js",
-    "test": "jest"
+    "test": "jest",
+	"generate": "nuxt generate"
   },
   "dependencies": {
     "@google-cloud/speech": "^4.1.1",
