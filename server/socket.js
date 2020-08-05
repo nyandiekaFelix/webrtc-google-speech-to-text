@@ -45,11 +45,11 @@ class Room {
 function initSocket(app) {
   const httpsOptions = {
     key: fs.readFileSync('/etc/ssl/tele.motocle2.com.key'), // add path to key
-    cert: fs.readfileSync('/etc/ssl/tele.motocle2.com.crt') // add path to cert
+    cert: fs.readFileSync('/etc/ssl/tele.motocle2.com.crt') // add path to cert
   };
    
   const server = process.env.NODE_ENV === 'production' ?
-    https.createServer(options, app) :
+    https.createServer(httpsOptions, app) :
     http.createServer(app);
 
   const io = socketio(server, { origins: '*:*' });
