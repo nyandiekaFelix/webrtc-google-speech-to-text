@@ -65,14 +65,23 @@
         this.$socket.$subscribe('meetingFull', this.onMeetingFull);
       },
 
-      onRoomJoined(data) {
+      async onRoomJoined(data) {
         const { room, users, currentUser } = data;
         this.room = room;
         this.currentUser = currentUser;
 
         if(users.length > 1) {
           const otherMembers = users.filter(({ socketId }) => socketId !== currentUser.socketId);
-          otherMembers.forEach(peer => { this.addPeer({ peer }); });
+          otherMembers.forEach((peer, idx) => { this.addPeer({ peer, shouldCreateOffer: true }); });
+        }
+        await this.getUserMedia();
+        
+        if(Object.keys(this.peers).length) {
+          Object.keys(this.peers).forEach(peer => {
+            const connection = this.peers[peer].peerConnection;  
+            this.localStream.getTracks()
+              .forEach(track => { connection.addTrack(track, this.localStream )});
+          })
         }
       },
 
@@ -98,8 +107,7 @@
       const user = { 
         username: this.user ? this.user.username : null,
       };
-        
-      this.getUserMedia().then(() => { this.joinRoom(user); })
+      this.joinRoom(user);
     },
   };
 </script>

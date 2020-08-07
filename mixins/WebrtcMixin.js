@@ -12,11 +12,18 @@ export default {
       scriptNode: null,
       sStream: null,
       captions: '',
-      RTCconfig: { 
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
+      RTCconfig: {
+        mandatory: {
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true,
+        },
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
+          { 
+            urls: 'turn:numb.viagenie.ca',
+            credential: 'nyandieka.f@gmail.com',
+            username: 'nyandieka.f@gmail.com'
+          }
         ],
       },
     };
@@ -51,7 +58,7 @@ export default {
   methods: {
     subscribeRTCListeners() {
       this.$socket.$subscribe('addPeer', this.addPeer);
-      this.$socket.$subscribe('addICECandidate', this.addICECandidate);
+      this.$socket.$subscribe('addICECandidate', this.addIceCandidate);
       this.$socket.$subscribe('peerOffer', this.onPeerOffer);
       this.$socket.$subscribe('peerAnswer', this.onPeerAnswer);
       this.$socket.$subscribe('transcriptionData', this.receiveTranscription);
@@ -65,10 +72,10 @@ export default {
           this.addLocalStream(stream);
         } catch (error) {
           //alert('In order to continue, Camera & Audio access is required.');
-          console.log("Couldn't get user media:\n", error)
+          console.log("Error getting user media:\n", error)
         }
       } else {
-        console.log("This browser does not support the 'getUserMedia' API");
+        console.log("Could not find an available media device");
       }
     },
   
@@ -89,7 +96,7 @@ export default {
       }
     },
 
-    async addPeer({ peer, shouldCreateOffer = false }) {
+    addPeer({ peer, shouldCreateOffer = false }) {
       const { socketId } = peer;
 
       if(this.peers[socketId]) {
@@ -104,16 +111,17 @@ export default {
       peerConnection.ontrack = this.addRemoteStream(socketId);
       peerConnection.oniceconnectionstatechange = this.checkPeerConnection(socketId);
 
-      this.localStream.getTracks()
-        .forEach(track => { peerConnection.addTrack(track, this.localStream )});
-
-      if(shouldCreateOffer) await this.createOffer(peerConnection, socketId);
+      if(shouldCreateOffer) this.createOffer(peerConnection, socketId);
     },
 
-    async createOffer(peerConnection, recipientSocket) {
-      const localDescription = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(localDescription);
-      this.$socket.client.emit('offer', localDescription, recipientSocket);
+    createOffer(peerConnection, recipientSocket) {
+      peerConnection.createOffer().then(localDescription => {
+        peerConnection.setLocalDescription(localDescription)
+          .then(() => {
+            this.$socket.client.emit('offer', localDescription, recipientSocket);
+          })
+      })
+      .catch(err => { console.log('Error creating offer', err) });
     },
 
     onPeerOffer({ caller, description }) {
@@ -122,17 +130,18 @@ export default {
       
       connection.setRemoteDescription(remoteDescription).then(() => {
         connection.createAnswer()
-          .then(async (answer) => {
-            await connection.setLocalDescription(answer);
-            this.$socket.client.emit('answer', answer, caller);
-          });
-      });
+          .then(async answer => {
+            await connection.setLocalDescription(answer)
+            this.$socket.client.emit('answer', connection.localDescription, caller);
+          })
+      })
+      .catch(err => { console.log('Error answering offer', err) })
     },
 
-    onPeerAnswer({ recipient, description }) {
+    async onPeerAnswer({ recipient, description }) {
       const connection = this.peers[recipient].peerConnection;
       const remoteDescription = new RTCSessionDescription(description);
-      connection.setRemoteDescription(remoteDescription);
+      await connection.setRemoteDescription(remoteDescription).catch(err => { console.log('receive ans err', err)});
     },
 
     onICECandidate(socketId) {
@@ -147,10 +156,10 @@ export default {
       }
     },
 
-    addICECandidate(candidate) {
-      const { iceCandidate, socketId } = candidate;
-      const connection = this.peers[socketId].peerConnection;
-      if(iceCandidate.sdpMid && iceCandidate.sdpMLineIndex) connection.addIceCandidate(new RTCIceCandidate(iceCandidate));
+    addIceCandidate({ iceCandidate, socketId }) {
+      if(iceCandidate.sdpMid && iceCandidate.sdpMLineIndex)
+        this.peers[socketId].peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate))
+          .catch(err => { console.log('ice err', err) });
     },
 
     setupRecorder() {
