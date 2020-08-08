@@ -12,11 +12,13 @@ export default {
       scriptNode: null,
       sStream: null,
       captions: '',
-      RTCconfig: {
+      sdpConstraints: {
         mandatory: {
           offerToReceiveAudio: true,
           offerToReceiveVideo: true,
         },
+      },
+      RTCconfig: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { 
@@ -51,7 +53,7 @@ export default {
   },
 
   beforeDestroy() {
-    this.localStream.getTracks().forEach(track => track.stop());
+    //this.localStream.getTracks().forEach(track => track.stop());
     this.peers = {};
   },
 
@@ -92,12 +94,15 @@ export default {
     addRemoteStream(socketId) {
       const self = this;
       return event => {
-        self.peers[socketId].stream = event.streams[0];
+        event.track.onunmute = () => {
+          self.$refs[`video-${socketId}`][0].srcObject = event.streams[0];
+        }
       }
     },
 
-    addPeer({ peer, shouldCreateOffer = false }) {
+    async addPeer({ peer, shouldCreateOffer = false }) {
       const { socketId } = peer;
+      let offer;
 
       if(this.peers[socketId]) {
         console.log('Already connected to peer');
@@ -105,21 +110,22 @@ export default {
       }
 
       const peerConnection = new RTCPeerConnection(this.RTCconfig);
-      this.peers = { ...this.peers, [socketId]: { peerConnection, ...peer, stream: null }};
+      this.peers = { ...this.peers, [socketId]: { peerConnection, ...peer, stream: null, candidateQueue: [] }};
 
-      peerConnection.onicecandidate = this.onICECandidate(socketId);
+      peerConnection.onicecandidate = this.onICECandidate(socketId, offer);
       peerConnection.ontrack = this.addRemoteStream(socketId);
       peerConnection.oniceconnectionstatechange = this.checkPeerConnection(socketId);
 
-      if(shouldCreateOffer) this.createOffer(peerConnection, socketId);
+      if(shouldCreateOffer) offer = await this.createOffer(peerConnection, socketId);
     },
 
     createOffer(peerConnection, recipientSocket) {
-      peerConnection.createOffer().then(localDescription => {
-        peerConnection.setLocalDescription(localDescription)
-          .then(() => {
-            this.$socket.client.emit('offer', localDescription, recipientSocket);
-          })
+      this.localStream.getTracks()
+        .forEach(track => { peerConnection.addTrack(track, this.localStream )});
+      return peerConnection.createOffer(this.sdpConstraints)
+        .then(async (localDescription) => {          
+          await peerConnection.setLocalDescription(localDescription);
+          return localDescription;
       })
       .catch(err => { console.log('Error creating offer', err) });
     },
@@ -127,39 +133,49 @@ export default {
     onPeerOffer({ caller, description }) {
       const connection = this.peers[caller].peerConnection;
       const remoteDescription = new RTCSessionDescription(description);
-      
-      connection.setRemoteDescription(remoteDescription).then(() => {
-        connection.createAnswer()
-          .then(async answer => {
-            await connection.setLocalDescription(answer)
-            this.$socket.client.emit('answer', connection.localDescription, caller);
-          })
+      if(description.type === 'offer') {
+        connection.setRemoteDescription(remoteDescription).then(async () => { 
+          this.localStream.getTracks()
+            .forEach(track => { connection.addTrack(track, this.localStream )});
+          connection.createAnswer(this.sdpConstraints)
+            .then(async answer => {
+              await connection.setLocalDescription(answer)
+              this.$socket.client.emit('offer', connection.localDescription, caller);
+            })
       })
-      .catch(err => { console.log('Error answering offer', err) })
+      .catch(err => { console.log(`Error setting offer description`, err) })
+      } else if (description.type === 'answer' && !connection.remoteDescription) {
+        connection.setRemoteDescription(remoteDescription)
+          .catch(err => { console.log('Error setting answer description')})
+      }
     },
-
-    async onPeerAnswer({ recipient, description }) {
-      const connection = this.peers[recipient].peerConnection;
-      const remoteDescription = new RTCSessionDescription(description);
-      await connection.setRemoteDescription(remoteDescription).catch(err => { console.log('receive ans err', err)});
+    
+    checkPeerConnection(socketId) {
+      const self = this;
+      return event => {
+        const peerState = self.peers[socketId].peerConnection.iceConnectionState;
+        if (peerState === "closed") {
+          self.removePeer(socketId);
+        }
+      };
     },
 
     onICECandidate(socketId) {
       const self = this;
       return event => {
-        if(event.candidate) {
-          self.$socket.client.emit('iceCandidate', {
-            socketId,
-            iceCandidate: { ...event.candidate }
-          });
+        const end = event.candidate === null;
+        if(end) {
+          const offer = self.peers[socketId].peerConnection.localDescription;
+          self.$socket.client.emit('offer', offer, socketId);
         }
       }
     },
 
     addIceCandidate({ iceCandidate, socketId }) {
-      if(iceCandidate.sdpMid && iceCandidate.sdpMLineIndex)
-        this.peers[socketId].peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate))
-          .catch(err => { console.log('ice err', err) });
+      const end = Object.keys(iceCandidate).length === 0;
+      const peer = this.peers[socketId];
+        //this.peers[socketId].peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate))
+          //.catch(err => { console.log('ice err', err) });
     },
 
     setupRecorder() {
@@ -228,17 +244,7 @@ export default {
       this.peers = peers;
     },
 
-    checkPeerConnection(socketId) {
-      const self = this;
-      return event => {
-        const peerState = self.peers[socketId].peerConnection.iceConnectionState;
-        if (peerState === "closed") {
-          self.removePeer(socketId);
-        }
-      };
-    },
-
-    toggleVideo() {
+       toggleVideo() {
       this.video_tracks[0].enabled = !(this.video_tracks[0].enabled);
       this.videoOn = this.video_tracks[0].enabled;
     },

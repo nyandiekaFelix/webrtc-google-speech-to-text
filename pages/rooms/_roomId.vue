@@ -16,7 +16,7 @@
             class="video-item">
             <p class="video-header" v-if="currentUser">{{ currentUser.username || '---' }}</p> 
             <video ref="localVideo" 
-              autoplay playsinline></video> 
+              autoplay playsinline controls></video> 
           </b-col>
           <b-col 
             cols="6"
@@ -24,10 +24,9 @@
             v-for="peer in Object.keys(peers)"
             :key="peers[peer].socketId">
             <p class="video-header">{{ peers[peer].username || '---' }}</p> 
-            <video autoplay
+            <video autoplay playsinline controls
               class="remote-video" 
-              ref="`video-${peer}`"
-              :src-object.camel="peers[peer].stream"></video>      
+              :ref="`video-${peer}`"></video>      
           </b-col>
         </b-row>
       </b-container>
@@ -69,19 +68,11 @@
         const { room, users, currentUser } = data;
         this.room = room;
         this.currentUser = currentUser;
-
+        
+        await this.getUserMedia();
         if(users.length > 1) {
           const otherMembers = users.filter(({ socketId }) => socketId !== currentUser.socketId);
           otherMembers.forEach((peer, idx) => { this.addPeer({ peer, shouldCreateOffer: true }); });
-        }
-        await this.getUserMedia();
-        
-        if(Object.keys(this.peers).length) {
-          Object.keys(this.peers).forEach(peer => {
-            const connection = this.peers[peer].peerConnection;  
-            this.localStream.getTracks()
-              .forEach(track => { connection.addTrack(track, this.localStream )});
-          })
         }
       },
 
