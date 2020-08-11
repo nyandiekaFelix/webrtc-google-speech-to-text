@@ -13,14 +13,23 @@ export default {
       sStream: null,
       captions: '',
       sdpConstraints: {
-        mandatory: {
-          offerToReceiveAudio: true,
-          offerToReceiveVideo: true,
-        },
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
       },
       RTCconfig: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:relay.backups.cz' },
+          {
+            url: 'turn:relay.backups.cz',
+            credential: 'webrtc',
+            username: 'webrtc'
+          },
+          {
+            url: 'turn:relay.backups.cz?transport=tcp',
+            credential: 'webrtc',
+            username: 'webrtc'
+          },
           { 
             urls: 'turn:numb.viagenie.ca',
             credential: 'nyandieka.f@gmail.com',
@@ -53,16 +62,17 @@ export default {
   },
 
   beforeDestroy() {
-    //this.localStream.getTracks().forEach(track => track.stop());
+    this.localStream && this.localStream.getTracks().forEach(track => track.stop());
     this.peers = {};
+    this.exitRoom();
   },
-
+  
   methods: {
     subscribeRTCListeners() {
       this.$socket.$subscribe('addPeer', this.addPeer);
       this.$socket.$subscribe('addICECandidate', this.addIceCandidate);
-      this.$socket.$subscribe('peerOffer', this.onPeerOffer);
-      this.$socket.$subscribe('peerAnswer', this.onPeerAnswer);
+      this.$socket.$subscribe('peerOffer', this.onSdp);
+      this.$socket.$subscribe('peerAnswer', this.onSdp);
       this.$socket.$subscribe('transcriptionData', this.receiveTranscription);
       this.$socket.$subscribe('removePeer', this.removePeer);
     },
@@ -94,9 +104,7 @@ export default {
     addRemoteStream(socketId) {
       const self = this;
       return event => {
-        event.track.onunmute = () => {
-          self.$refs[`video-${socketId}`][0].srcObject = event.streams[0];
-        }
+        self.$refs[`video-${socketId}`][0].srcObject = event.streams[0];
       }
     },
 
@@ -115,38 +123,38 @@ export default {
       peerConnection.onicecandidate = this.onICECandidate(socketId, offer);
       peerConnection.ontrack = this.addRemoteStream(socketId);
       peerConnection.oniceconnectionstatechange = this.checkPeerConnection(socketId);
-
-      if(shouldCreateOffer) offer = await this.createOffer(peerConnection, socketId);
+      this.localStream.getTracks()
+        .forEach(track => { peerConnection.addTrack(track, this.localStream )});
+      if(shouldCreateOffer) await this.createOffer(peerConnection, socketId);
     },
 
     createOffer(peerConnection, recipientSocket) {
-      this.localStream.getTracks()
-        .forEach(track => { peerConnection.addTrack(track, this.localStream )});
-      return peerConnection.createOffer(this.sdpConstraints)
+      peerConnection.createOffer(this.sdpConstraints)
         .then(async (localDescription) => {          
-          await peerConnection.setLocalDescription(localDescription);
-          return localDescription;
+          await peerConnection.setLocalDescription(localDescription)
+        this.$socket.client.emit('offer', localDescription, recipientSocket);
       })
       .catch(err => { console.log('Error creating offer', err) });
     },
 
-    onPeerOffer({ caller, description }) {
-      const connection = this.peers[caller].peerConnection;
+    onSdp({ socketId, description }) {
+      const connection = this.peers[socketId].peerConnection;
       const remoteDescription = new RTCSessionDescription(description);
       if(description.type === 'offer') {
         connection.setRemoteDescription(remoteDescription).then(async () => { 
-          this.localStream.getTracks()
-            .forEach(track => { connection.addTrack(track, this.localStream )});
           connection.createAnswer(this.sdpConstraints)
             .then(async answer => {
-              await connection.setLocalDescription(answer)
-              this.$socket.client.emit('offer', connection.localDescription, caller);
-            })
-      })
-      .catch(err => { console.log(`Error setting offer description`, err) })
+              await connection.setLocalDescription(answer);
+              if(this.peers[socketId].candidateQueue.length) candidateQueue.forEach(candidate => {
+                  connection.addIceCandidate(candidate).catch(err => { console.log('ICE err', err) })
+                })
+              this.$socket.client.emit('answer', connection.localDescription, socketId);
+            }).catch(err => { console.log('Error creating answer', err)})
+        })
+        .catch(err => { console.log(`Error setting offer description`, err) })
       } else if (description.type === 'answer' && !connection.remoteDescription) {
         connection.setRemoteDescription(remoteDescription)
-          .catch(err => { console.log('Error setting answer description')})
+          .catch(err => { console.log('Error setting answer description', err)})
       }
     },
     
@@ -164,18 +172,23 @@ export default {
       const self = this;
       return event => {
         const end = event.candidate === null;
-        if(end) {
-          const offer = self.peers[socketId].peerConnection.localDescription;
-          self.$socket.client.emit('offer', offer, socketId);
-        }
+        const connection = self.peers[socketId].peerConnection;
+        self.$socket.client.emit('iceCandidate', {
+          socketId,
+          iceCandidate: event.candidate
+        });
       }
     },
 
     addIceCandidate({ iceCandidate, socketId }) {
       const end = Object.keys(iceCandidate).length === 0;
       const peer = this.peers[socketId];
-        //this.peers[socketId].peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate))
-          //.catch(err => { console.log('ice err', err) });
+      if(!end && iceCandidate.sdpMid !== null && iceCandidate.sdpMLineIndex !== null) {
+        if(!peer.peerConnection.remoteDescription) {
+          const newCandidate = new RTCIceCandidate(iceCandidate);
+          peer.candidateQueue.push(newCandidate);
+        } else { peer.peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate)); }
+      }
     },
 
     setupRecorder() {
@@ -183,9 +196,7 @@ export default {
       this.sStream = SocketStream.createStream();
       SocketStream(this.$socket.client).emit('speechStream', this.sStream, this.roomId);
 
-      const audioStream = new MediaStream(this.audio_tracks);
-
-      const input = this.audioContext.createMediaStreamSource(audioStream);
+      const input = this.audioContext.createMediaStreamSource(this.localStream);
 
       const bufferSize = 2048;
       const scriptNode = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
@@ -244,7 +255,7 @@ export default {
       this.peers = peers;
     },
 
-       toggleVideo() {
+    toggleVideo() {
       this.video_tracks[0].enabled = !(this.video_tracks[0].enabled);
       this.videoOn = this.video_tracks[0].enabled;
     },

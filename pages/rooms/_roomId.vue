@@ -16,7 +16,7 @@
             class="video-item">
             <p class="video-header" v-if="currentUser">{{ currentUser.username || '---' }}</p> 
             <video ref="localVideo" 
-              autoplay playsinline controls></video> 
+              autoplay playsinline controls muted></video> 
           </b-col>
           <b-col 
             cols="6"
@@ -69,11 +69,13 @@
         this.room = room;
         this.currentUser = currentUser;
         
-        await this.getUserMedia();
-        if(users.length > 1) {
-          const otherMembers = users.filter(({ socketId }) => socketId !== currentUser.socketId);
-          otherMembers.forEach((peer, idx) => { this.addPeer({ peer, shouldCreateOffer: true }); });
-        }
+        this.getUserMedia()
+        .then(() => {
+          if(users.length > 1) {
+            const otherMembers = users.filter(({ socketId }) => socketId !== currentUser.socketId);
+            otherMembers.forEach((peer, idx) => { this.addPeer({ peer, shouldCreateOffer: true }); });
+          }
+        });
       },
 
       onMeetingFull() {
